@@ -3,6 +3,7 @@ package gojs
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/dop251/goja"
 	"github.com/dop251/goja/parser"
@@ -29,6 +30,7 @@ func New(opt ...Option) *Runtime {
 	} else {
 		ret.ctx, ret.cancel = context.WithCancel(ret.opts.ctx)
 	}
+	ret.opts.registry.Enable(ret.Runtime)
 	if ret.opts.loop == nil {
 		ret.opts.loop = NewSimpleLoop()
 	}
@@ -38,6 +40,7 @@ func New(opt ...Option) *Runtime {
 	if ret.opts.timer {
 		ret.initTimer()
 	}
+	ret.initGOJS()
 	return ret
 }
 func (r *Runtime) Cancel() {
@@ -56,11 +59,19 @@ func (r *Runtime) Go(job func(worker Worker)) error {
 	return r.opts.loop.Go(r.ctx, job)
 }
 func (r *Runtime) RunScript(name string, src interface{}) (v goja.Value, e error) {
+	if filepath.IsAbs(name) {
+		name = filepath.Clean(name)
+	} else {
+		name, e = filepath.Abs(name)
+		if e != nil {
+			return
+		}
+	}
 	b, e := parser.ReadSource(name, src)
 	if e != nil {
 		return
 	}
-	return r.Runtime.RunScript(name, BytesToString(b))
+	return r.Runtime.RunScript(name, wrapSource(name, b, true))
 }
 func (r *Runtime) initConsole() {
 	obj := r.NewObject()

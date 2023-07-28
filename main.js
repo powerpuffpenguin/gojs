@@ -1,7 +1,12 @@
+function main() {
+    let v = uint64()
+    console.log(v)
+    println(v)
+}
 console.log(123)
 var t = setTimeout(() => {
     console.log("cb 2")
-}, 2000)
+}, 200)
 setTimeout(() => {
     console.log("cb ok", t)
     clearTimeout(t)
@@ -11,6 +16,7 @@ setTimeout(() => {
         console.log(v++)
         if (v > 4) {
             clearInterval(this)
+            main()
         }
-    }, 1000)
-}, 1000)
+    }, 100)
+}, 100)

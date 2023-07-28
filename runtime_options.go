@@ -2,14 +2,43 @@ package gojs
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/dop251/goja_nodejs/require"
 )
 
+func wrapSource(filename string, b []byte, exports bool) string {
+	if exports {
+		return fmt.Sprintf(`(function(){var exports={};(function(__filename,__dirname){%s})(%q,%q)})()`,
+			b,
+			filename, filepath.Dir(filename),
+		)
+	} else {
+		return fmt.Sprintf(`(function(__filename,__dirname){%s})(%q,%q)`,
+			b,
+			filename, filepath.Dir(filename),
+		)
+	}
+}
+
 var defaultOptions = options{
-	registry: require.NewRegistry(),
-	console:  true,
-	timer:    true,
+	registry: require.NewRegistry(
+		require.WithLoader(func(filename string) (b []byte, e error) {
+			b, e = os.ReadFile(filename)
+			if e != nil {
+				if os.IsNotExist(e) {
+					e = require.ModuleFileDoesNotExistError
+				}
+				return
+			}
+			b = StringToBytes(wrapSource(filename, b, false))
+			return
+		}),
+	),
+	console: true,
+	timer:   true,
 }
 
 type options struct {
